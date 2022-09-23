@@ -1,12 +1,13 @@
+import 'package:imdb_app/globals.dart';
 import 'package:flutter/material.dart';
 import 'package:imdb_app/classes/favorites_provider.dart';
 import 'package:imdb_app/classes/popular_movies.dart';
 import 'package:imdb_app/screens/movie_details_simple_screen.dart';
 import 'package:imdb_app/constants/api_constants.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:imdb_app/functions.dart';
 import 'package:provider/provider.dart';
 import 'package:imdb_app/constants/style.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class GenreButtons extends StatelessWidget {
   final List<String> genreNames;
@@ -41,36 +42,38 @@ class GenreButtons extends StatelessWidget {
   }
 }
 
-
 class PopularMoviesList extends StatelessWidget {
-  const PopularMoviesList({super.key, required this.movies});
   final List<PopularMovie> movies;
+  final String heroTag;
+
+  const PopularMoviesList({super.key, required this.movies, required this.heroTag});
 
   @override
   Widget build(BuildContext context) {
-    //movies.map((movie) async => {await DatabaseHelper.instance.add(movie)});
-    return buildList(movies);
+
+    return ListView.builder(
+      itemCount: movies.length,
+      itemBuilder: (context, index) {
+        return MovieTile(
+          movie: movies[index],
+          heroTag: heroTag,
+        );
+      },
+    );
   }
 }
 
+class MovieTile extends StatefulWidget {
+  final PopularMovie movie;
+  final String heroTag;
 
-Widget buildList(movies) => ListView.builder(
-  itemCount: movies.length,
-  itemBuilder: (context, index) {
-    return MovieTile(movies: movies, index: index);
-  },
-);
+  const MovieTile({Key? key, required this.movie, required this.heroTag}) : super(key: key);
 
-class MovieTile extends StatelessWidget {
-  final List<PopularMovie> movies;
-  final int index;
+  @override
+  State<MovieTile> createState() => _MovieTileState();
+}
 
-  const MovieTile({
-    Key? key,
-    required this.movies,
-    required this.index,
-  }) : super(key: key);
-
+class _MovieTileState extends State<MovieTile> {
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -83,16 +86,31 @@ class MovieTile extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 5.0),
               child: Hero(
-                tag: "$imageFormatUrl${movies[index].posterPath}",
-                child: Container(
-                  height: 100.0,
-                  width: 100.0,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4.0),
-                    image: DecorationImage(
-                      image: NetworkImage("$imageFormatUrl${movies[index].posterPath}"),
-                      fit: BoxFit.cover,
+                tag: "${widget.heroTag}$imageFormatUrl${widget.movie.posterPath}",
+                child: CachedNetworkImage(
+                  imageUrl: "$imageFormatUrl${widget.movie.posterPath}",
+                  imageBuilder: (BuildContext context, ImageProvider<Object> imageProvider) => Container(
+                    width: 100.0,
+                    height: 100.0,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4.0),
+                      image: DecorationImage(
+                        image: imageProvider,
+                        fit: BoxFit.cover,
+                      ),
                     ),
+                  ),
+                  placeholder: (BuildContext context, String url) => ImagePlaceholder(
+                    id: widget.movie.id ?? -1,
+                    duration: 2500,
+                    width: 100.0,
+                    height: 100.0,
+                  ),
+                  errorWidget: (BuildContext context, String url, dynamic error) => ImagePlaceholder(
+                    id: widget.movie.id ?? -1,
+                    duration: 2000,
+                    width: 100.0,
+                    height: 100.0,
                   ),
                 ),
               ),
@@ -100,7 +118,7 @@ class MovieTile extends StatelessWidget {
             const SizedBox(width: 10.0),
             Expanded(
               child: LayoutBuilder(
-                builder: (context, constraints) {
+                builder: (BuildContext context, BoxConstraints constraints) {
                   return SizedBox(
                     height: 110.0,
                     child: Column(
@@ -117,7 +135,7 @@ class MovieTile extends StatelessWidget {
                                   children: [
                                     Flexible(
                                       child: Text(
-                                        movies[index].title ?? "",
+                                        widget.movie.title ?? "",
                                         style: const TextStyle(
                                           fontSize: 18.0,
                                           fontWeight: FontWeight.w500,
@@ -131,24 +149,17 @@ class MovieTile extends StatelessWidget {
                                 width: 30.0,
                                 child: GestureDetector(
                                   onTap: () {
-                                    Provider.of<FavoritesProvider>(context,
-                                        listen: false)
-                                        .updateFavorites(
-                                        movies[index].id ?? -1);
+                                    Provider.of<FavoritesProvider>(context, listen: false).updateFavorites(widget.movie.id ?? -1);
                                   },
-                                  child: Provider.of<FavoritesProvider>(
-                                      context)
-                                      .isFavorite(movies[index].id ?? -1)
-                                      ? Icon(
-                                    Icons.bookmark_added,
-                                    color: kTagFavoriteBgColor,
-                                  )
-                                      : const Icon(
-                                    Icons.bookmark_border,
-                                    color: Colors.white,
-                                  ),
+                                  child: Provider.of<FavoritesProvider>(context).isFavorite(widget.movie.id ?? -1) ?
+                                    const Icon(
+                                      Icons.bookmark_added,
+                                      color: kTagFavoriteBgColor,
+                                    ) : const Icon(
+                                      Icons.bookmark_border,
+                                      color: Colors.white,
+                                    ),
                                 ),
-
                               ),
                             ],
                           ),
@@ -157,11 +168,11 @@ class MovieTile extends StatelessWidget {
                         Row(
                           children: <Widget>[
                             SvgPicture.asset("assets/icons/star.svg"),
-                            Text(" ${movies[index].voteAverage} / 10 IMDb"),
+                            Text(" ${widget.movie.voteAverage} / 10 IMDb"),
                           ],
                         ),
                         const SizedBox(height: 8.0),
-                        GenreButtons(genreNames: createGenreList(movies[index].genreIds ?? []),
+                        GenreButtons(genreNames: createGenreList(widget.movie.genreIds ?? []),
                         ),
                       ],
                     ),
@@ -175,17 +186,78 @@ class MovieTile extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => MovieDetailsSimpleScreen(
-                      id: movies[index].id ?? -1,
-                      imgUrl: "$imageFormatUrl${movies[index].posterPath}",
-                      title: movies[index].title ?? "",
-                      rating: movies[index].voteAverage ?? "",
-                      description: movies[index].overview ?? "",
-                      genreIds: movies[index].genreIds ?? [],
-                      )),
+                builder: (context) => MovieDetailsSimpleScreen(
+                  heroTag: widget.heroTag,
+                  id: widget.movie.id ?? -1,
+                  imgUrl: "$imageFormatUrl${widget.movie.posterPath}",
+                  title: widget.movie.title ?? "",
+                  rating: widget.movie.voteAverage ?? "",
+                  description: widget.movie.overview ?? "",
+                  genreIds: widget.movie.genreIds ?? [],
+                ),
+              ),
             );
           },
-        ));
+        ),
+    );
+  }
+}
 
+class ImagePlaceholder extends StatefulWidget {
+  final int id;
+  final int duration;
+  final double width;
+  final double height;
+
+  const ImagePlaceholder({Key? key, required this.id, required this.duration, required this.width, required this.height}) : super(key: key);
+
+  @override
+  State<ImagePlaceholder> createState() => _ImagePlaceholderState();
+}
+
+class _ImagePlaceholderState extends State<ImagePlaceholder> with SingleTickerProviderStateMixin {
+  AnimationController? controller;
+
+  @override
+  void initState() {
+    super.initState();
+
+    controller = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: widget.duration),
+    );
+    controller?.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          Globals.cachedNetworkImageBug[widget.id] = true;
+        });
+      }
+    });
+    controller?.forward();
+  }
+
+  @override
+  void dispose() {
+    controller?.dispose();
+
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return (Globals.cachedNetworkImageBug[widget.id] ?? false) ? Container(
+      width: widget.width,
+      height: widget.height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4.0),
+        image: const DecorationImage(
+          image: AssetImage("assets/icons/imdb-logo.png"),
+          fit: BoxFit.cover,
+        ),
+      ),
+    ) : const SizedBox(
+      height: 100.0,
+      width: 100.0,
+    );
   }
 }

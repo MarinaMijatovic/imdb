@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:imdb_app/classes/popular_movies.dart';
@@ -11,7 +13,7 @@ class MoviesDatabase {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('popularmovies35.db');
+    _database = await _initDB("popularmovies.db");
     return _database!;
   }
 
@@ -22,26 +24,49 @@ class MoviesDatabase {
   }
 
   Future _createDB(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE movies(
-      id INTEGER PRIMARY KEY,
-      title TEXT,
-      genreIds TEXT,
-      voteAverage TEXT,
-      posterPath TEXT,
-      overview TEXT
-      )
-    ''');
+    await Future.wait([
+      db.execute("""
+        CREATE TABLE movies(
+        id INTEGER PRIMARY KEY,
+        title TEXT,
+        genreIds TEXT,
+        voteAverage TEXT,
+        posterPath TEXT,
+        overview TEXT
+        )
+      """),
+      db.execute("""
+        CREATE TABLE genres(
+        id INTEGER PRIMARY KEY,
+        name TEXT
+        )
+      """),
+      db.execute("""
+        CREATE TABLE favorites(
+        id INTEGER PRIMARY KEY,
+        list TEXT
+        )
+      """),
+    ]);
+    await db.insert("favorites", {
+      "id": 0,
+      "list": "[]",
+    });
   }
 
-  Future<int> addToDB(PopularMovie movie) async {
-    Database db = await instance.database;
-    final List<Map<String, Object?>> maps = await db.query("movies");
-    if (maps.isEmpty) {
-      return await db.insert('movies', movie.toMap());
-    } else {
-      return 1;
-    }
+  Future<void> addPopularToDB(PopularMovie movie) async {
+    final Database db = await database;
+    await db.insert("movies", movie.toMap());
+  }
+
+  Future<void> addFavoritesToDB(List<int> favorites) async {
+    final Database db = await database;
+    String encodedList = jsonEncode(favorites);
+    await db.execute("""
+      UPDATE favorites
+      SET list='$encodedList'
+      WHERE id=0
+    """);
   }
 
   Future<List<PopularMovie>> readFromDB() async {

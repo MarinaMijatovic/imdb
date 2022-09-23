@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:imdb_app/classes/database.dart';
 
 class PopularMovie {
@@ -47,7 +46,7 @@ class PopularMovie {
     return dict;
   }
 
-  Future<int> addToDB() async {
-    return MoviesDatabase.instance.addToDB(this);
+  Future<void> addToDB() async {
+    await MoviesDatabase.instance.addPopularToDB(this);
   }
 }

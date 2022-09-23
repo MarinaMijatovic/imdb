@@ -1,13 +1,14 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:imdb_app/functions.dart';
+import 'package:imdb_app/globals.dart';
 import 'package:provider/provider.dart';
 import 'package:imdb_app/constants/style.dart';
 import '../classes/favorites_provider.dart';
 import 'package:imdb_app/widgets.dart';
 
-
 class MovieDetailsSimpleScreen extends StatefulWidget {
+  final String heroTag;
   final int id;
   final String imgUrl;
   final String title;
@@ -15,17 +16,16 @@ class MovieDetailsSimpleScreen extends StatefulWidget {
   final String description;
   final List<int> genreIds;
 
-
   const MovieDetailsSimpleScreen({
     Key? key,
-     required this.id,
+    required this.heroTag,
+    required this.id,
     required this.imgUrl,
     required this.title,
     required this.rating,
     required this.description,
     required this.genreIds,
   }) : super(key: key);
-
 
   @override
   State<MovieDetailsSimpleScreen> createState() => _MovieDetailsSimpleScreenState();
@@ -47,7 +47,7 @@ class _MovieDetailsSimpleScreenState extends State<MovieDetailsSimpleScreen> {
 
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
-    
+
     if (!isReady) getReady();
 
     return Scaffold(
@@ -59,26 +59,43 @@ class _MovieDetailsSimpleScreenState extends State<MovieDetailsSimpleScreen> {
               top: 0.0,
               left: 0.0,
               child: Hero(
-                tag: widget.imgUrl,
-                child: Container(
-                  width: width,
-                  height: width,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: NetworkImage(widget.imgUrl),
-                      fit: BoxFit.cover,
+                tag: widget.heroTag + widget.imgUrl,
+                child: CachedNetworkImage(
+                  imageUrl: widget.imgUrl,
+                  imageBuilder: (BuildContext context, ImageProvider<Object> imageProvider) => Container(
+                    width: width,
+                    height: width,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4.0),
+                      image: DecorationImage(
+                        image: imageProvider,
+                        fit: BoxFit.cover,
+                      ),
                     ),
+                  ),
+                  placeholder: (BuildContext context, String url) => ImagePlaceholder(
+                    id: widget.id,
+                    duration: 2500,
+                    width: width,
+                    height: width,
+                  ),
+                  errorWidget: (BuildContext context, String url, dynamic error) => ImagePlaceholder(
+                    id: widget.id,
+                    duration: 2000,
+                    width: width,
+                    height: width,
                   ),
                 ),
               ),
             ),
             AnimatedPositioned(
-              top: isReady ? width - 140.0  : height,
+              //top: isReady ? (width < height ? width - 140.0 : 0)  : height,
+              top: isReady ? height * (width < height ? 0.4 : 0.2) : height,
               left: 0.0,
               duration: const Duration(milliseconds: 300),
               child: Container(
                 width: width,
-                height: 0.6 * height,
+                height: height * (width < height ? 0.6 : 0.8),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20.0,
                   vertical: 30.0,
@@ -93,23 +110,18 @@ class _MovieDetailsSimpleScreenState extends State<MovieDetailsSimpleScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /*          Text(
-                      widget.title,
-                      style: const TextStyle(
-                        fontSize: 20.0,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                      ),
-                    ),*/
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(
-                          widget.title,
-                          style: const TextStyle(
-                            fontSize: 20.0,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
+                        Flexible(
+                          child: Text(
+                            widget.title,
+                            style: const TextStyle(
+                              fontSize: 20.0,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                         SizedBox(
@@ -117,19 +129,19 @@ class _MovieDetailsSimpleScreenState extends State<MovieDetailsSimpleScreen> {
                           child: TextButton(
                             onPressed: () {
                               Provider.of<FavoritesProvider>(context,
-                                      listen: false)
+                                  listen: false)
                                   .updateFavorites(widget.id );
                             },
                             child: Provider.of<FavoritesProvider>(context)
-                                    .isFavorite(widget.id )
+                                .isFavorite(widget.id )
                                 ? const Icon(
-                                    Icons.bookmark_added,
-                                    color: kTagFavoriteBgColor,
-                                  )
+                              Icons.bookmark_added,
+                              color: kTagFavoriteBgColor,
+                            )
                                 : const Icon(
-                                    Icons.bookmark_border,
-                                    color: Colors.white,
-                                  ),
+                              Icons.bookmark_border,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ],

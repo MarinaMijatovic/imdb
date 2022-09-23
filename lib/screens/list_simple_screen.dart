@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:imdb_app/globals.dart';
 import 'package:imdb_app/classes/popular_movies.dart';
 import 'package:imdb_app/constants/style.dart';
-import 'package:imdb_app/functions.dart';
 import 'package:imdb_app/screens/favorites_screen.dart';
 import 'package:imdb_app/widgets.dart';
 
@@ -14,6 +14,21 @@ class ListSimpleScreen extends StatefulWidget {
 
 class _ListSimpleScreenState extends State<ListSimpleScreen> {
   List<PopularMovie> movieList = [];
+  bool displayMovieList = false;
+
+  void setDisplayMovieList() {
+    setState(() {
+      displayMovieList = Globals.genres.isNotEmpty;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    displayMovieList = Globals.genres.isNotEmpty;
+    Globals.setDisplayMovieList = setDisplayMovieList;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +42,8 @@ class _ListSimpleScreenState extends State<ListSimpleScreen> {
       ),
       backgroundColor: kBgColor,
       body: SafeArea(
-        child: FutureBuilder<List<PopularMovie>>(
-          future: fetchPopularMovies(),
+        child: displayMovieList ? FutureBuilder<List<PopularMovie>>(
+          future: fetchPopularMovies(context),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return const Center(
@@ -37,13 +52,18 @@ class _ListSimpleScreenState extends State<ListSimpleScreen> {
                 ),
               );
             } else if (snapshot.hasData) {
-              return PopularMoviesList(movies: snapshot.data!);
+              return PopularMoviesList(
+                movies: snapshot.data!,
+                heroTag: "Popular",
+              );
             } else {
               return const Center(
                 child: CircularProgressIndicator(),
               );
             }
           },
+        ) : const Center(
+          child: CircularProgressIndicator(),
         ),
       ),
       bottomNavigationBar: const BottomMenu(),
@@ -95,7 +115,7 @@ class BottomMenu extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => const FavoritesScreen()));
+                  MaterialPageRoute(builder: (context) => const FavoritesScreen()));
               },
               child: Row(
                 children: const <Widget>[
